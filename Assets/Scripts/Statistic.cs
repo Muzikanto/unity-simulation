@@ -9,28 +9,48 @@ public class Statistic : MonoBehaviour
     public GameObject rabbits;
     public GameObject foods;
 
-    private TextMeshProUGUI _foxesText;
-    private TextMeshProUGUI _rabbitsText;
-    private TextMeshProUGUI _foodsText;
+    public TextMeshProUGUI foxesText;
+    public TextMeshProUGUI rabbitsText;
+    public TextMeshProUGUI foodsText;
+    public TextMeshProUGUI timerText;
+
+    private float _time = 0f;
 
     // Start is called before the first frame update
     void Start()
     {
-        _foxesText = gameObject.transform.GetChild(1).GetComponent<TextMeshProUGUI>();
-        _rabbitsText = gameObject.transform.GetChild(2).GetComponent<TextMeshProUGUI>();
-        _foodsText = gameObject.transform.GetChild(3).GetComponent<TextMeshProUGUI>();
+        _time = 0f;
+
+        StartCoroutine(timer());
     }
 
     // Update is called once per frame
     void Update()
     {
         int foxCount = foxes.transform.childCount;
-        _foxesText.SetText("Fox: " + foxCount);
+        foxesText.SetText("Fox: " + foxCount);
 
         int rabbitCount = rabbits.transform.childCount;
-        _rabbitsText.SetText("Rabbit: " + rabbitCount);
+        rabbitsText.SetText("Rabbit: " + rabbitCount);
 
         int foodCount = foods.transform.childCount;
-        _foodsText.SetText("Food: " + foodCount);
+        foodsText.SetText("Food: " + foodCount);
+    }
+
+    private IEnumerator timer()
+    {
+        while(true)
+        {
+            yield return new WaitForSecondsRealtime(1);
+
+            _time++;
+
+            int minutes = (int) _time / 60;
+            float fMinutes = (float) minutes;
+            float fSeconds = _time - minutes * 60f;
+            int seconds = (int)fSeconds;
+
+            timerText.SetText(minutes.ToString() + ":" + seconds.ToString());
+        }
     }
 }

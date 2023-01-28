@@ -13,7 +13,7 @@ public class AnimalVision : MonoBehaviour
     private GameObject _animal;
     private IAnimalVision _vision;
 
-    private void Awake()
+    private void Start()
     {
         _animal = transform.parent.gameObject;
         _vision = _animal.GetComponent<IAnimalVision>();
@@ -21,7 +21,10 @@ public class AnimalVision : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        _vision.OnVisionEnter(other);
+        if (_vision != null)
+        {
+            _vision.OnVisionEnter(other);
+        }
     }
 
     private void OnTriggerExit(Collider other)

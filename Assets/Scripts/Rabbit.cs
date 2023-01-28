@@ -4,22 +4,33 @@ using static UnityEngine.GraphicsBuffer;
 using System.Collections;
 using System.Drawing;
 using static UnityEngine.ParticleSystem;
+using System.Security.Cryptography;
+using static UnityEditor.PlayerSettings;
+using static UnityEngine.EventSystems.EventTrigger;
+using System.ComponentModel;
 
 public class Rabbit : MonoBehaviour, IAnimalVision, IAnimalAttack
 {
-    public float speed = 5f;
-    public float jump_force = 2f;
+    public GameObject baby;
 
-    public int food_max = 10;
-    public int food = 0;
+    public int years = 3;
+    public int years_max = 3;
+    public int years_for_breading = 3;
 
-    private Transform _transform;
-    private Rigidbody _rigidBody;
-
-    private List<Collider> _food_list = new List<Collider>();
+    public bool breeding_is_search = true;
+    public float breeding_interval = 10f;
+    public float breeding_duration = 3f;
+    public int breeding_child_count = 2;
+    public GameObject breading_target = null;
 
     public HealthBar healthBar;
-    private AnimalController _controller;
+    private Transform _transform = null;
+    private Rigidbody _rigidBody = null;
+    private AnimalController _controller = null;
+    private AnimalConsumeFood _animalFood = null;
+
+    private List<GameObject> _food_list = new List<GameObject>();
+    private List<GameObject> _rabbit_list = new List<GameObject>();
 
     // Start is called before the first frame update
     void Start()
@@ -27,110 +38,280 @@ public class Rabbit : MonoBehaviour, IAnimalVision, IAnimalAttack
         _transform = GetComponent<Transform>();
         _rigidBody = GetComponent<Rigidbody>();
         _controller = GetComponent<AnimalController>();
+        _animalFood = GetComponent<AnimalConsumeFood>();
 
         updateTarget();
 
-        food = 5;
-        healthBar.initParams(food_max);
+        updateYear(years);
 
-        StartCoroutine(consumeFood());
+        StartCoroutine(enumeratorYear());
     }
 
     // Update is called once per frame
     void Update()
     {
         updateTarget();
-        updateParams();
     }
 
-    public void updateParams()
-    {
-        healthBar.updateParams(food);
-    }
+    // methods
 
     private void updateTarget()
     {
+        // stop if target exists
         if (_controller.target != null)
         {
             return;
         }
 
-        if (food != food_max && _food_list.Count > 0)
+        // breading
+        if (isStartBreading())
         {
-            //_food_list.Sort(delegate(Collider x, Collider y)
-            //{
-            //    return 1;
-            //});
-
-            _food_list.ForEach(x => { if (x == null) _food_list.Remove(x); });
-
-
-            Collider first = _food_list.Find(x =>
+            // if i see rabbits
+            if (_rabbit_list.Count > 0)
             {
-                Food foodGo = x.GetComponent<Food>();
+                // remove deleted
+                _rabbit_list.RemoveAll(x => x == null);
 
-                return foodGo.size > 2;
-            });
+                // get first breadable rabbit
+                GameObject first = _rabbit_list.Find(el => {
+                    Rabbit r = el.GetComponent<Rabbit>();
+                    bool is_true = r.isStartBreading();
 
+                    return is_true;
+                });
 
-            if (first)
+                // update target
+                if (first)
+                {
+                    Rabbit partnerRabbit = first.GetComponent<Rabbit>();
+
+                    // stop partner searching
+                    stopBreadingSearch();
+                    partnerRabbit.stopBreadingSearch();
+
+                    // setup partner
+                    breading_target = first;
+                    partnerRabbit.breading_target = gameObject;
+
+                    // move to partner
+                    _controller.updateTarget(first);
+                    partnerRabbit._controller.updateTarget(gameObject);
+
+                    return;
+                }
+            }
+        }
+
+        // find food
+        if (!_animalFood.isFull())
+        {
+            // if i see food
+            if (_food_list.Count > 0)
             {
-                _controller.updateTarget(first);
+                // remove deleted
+                _food_list.RemoveAll(x => x == null);
+
+                // get first available food
+                GameObject first = _food_list.Find(x =>
+                {
+                    Food foodGo = x.GetComponent<Food>();
+
+                    return foodGo.size > 2;
+                });
+
+
+                // update target
+                if (first)
+                {
+                    _controller.updateTarget(first.gameObject);
+
+                    return;
+                }
             }
         }
     }
 
-    IEnumerator consumeFood()
+    private void breeding() {
+        // stop dance for 2
+        if (breading_target)
+        {
+            Rabbit rabbit2 = breading_target.GetComponent<Rabbit>();
+
+            rabbit2._controller.stopDance();
+            rabbit2._controller.updateTarget(null);
+
+            rabbit2.breading_target = null;
+        }
+
+        // stop dance for 1
+        _controller.stopDance();
+        _controller.updateTarget(null);
+
+        breading_target = null;
+
+        // spawn babies
+        GameObject container = transform.parent.gameObject;
+
+        for(int i = 0; i < breeding_child_count; i++)
+        {
+            createBaby(container);
+        }
+
+        Invoke("startSearchBreeding", breeding_interval);
+    }
+
+    private IEnumerator enumeratorYear()
     {
-        while (food > 0)
+        while (years < years_max)
         {
             //Wait for seconds
             yield return new WaitForSecondsRealtime(10);
 
-            food--;
+            updateYear(years + 1);
         }
-
-        Destroy(gameObject);
     }
 
     // imlements
 
     public void OnVisionEnter(Collider other)
     {
-        string entityTag = other.tag;
-
-        if (entityTag == "Food")
+        switch(other.tag)
         {
-            _food_list.Add(other);
+            case "Food":
+                {
+                    _food_list.Add(other.gameObject);
+                    break;
+                };
+
+            case "Rabbit":
+                {
+                    _rabbit_list.Add(other.gameObject);
+                    break;
+                };
         }
     }
 
     public void OnVisionExit(Collider other)
     {
-        _food_list.Remove(other);
+        switch (other.tag)
+        {
+            case "Food":
+                {
+                    _food_list.Remove(other.gameObject);
+                    break;
+                };
+
+            case "Rabbit":
+                {
+                    _rabbit_list.Remove(other.gameObject);
+                    break;
+                };
+        }
     }
 
     public void OnAttackEnter(Collider other)
     {
-        string entityTag = other.tag;
-
-        if (entityTag == "Food")
+        switch (other.tag)
         {
-            Food foodGO = other.GetComponent<Food>();
+            case "Food":
+                {
+                    if (_animalFood.isFull() || breading_target)
+                    {
+                        return;
+                    }
 
-            if (food < food_max)
-            {
-                if (food + foodGO.size >= food_max)
+                    Food foodGO = other.GetComponent<Food>();
+
+                    int food_taked = 0;
+
+                    if (_animalFood.food + foodGO.size >= _animalFood.food_max)
+                    {
+                        food_taked = _animalFood.food_max - _animalFood.food;
+                    }
+                    else
+                    {
+                        food_taked = foodGO.size;
+                    }
+
+                    foodGO.decrement(food_taked);
+                    _animalFood.increaseFood(food_taked);
+
+                    _controller.updateTarget(null);
+
+                    break;
+                };
+
+            case "Rabbit":
                 {
-                    food = food_max;
-                }  else
-                {
-                    food = food + foodGO.size;
+                    // skip trigger for ground
+                    if (other.isTrigger)
+                    {
+                        return;
+                    }
+
+                    Rabbit partnerRabbit = other.GetComponent<Rabbit>();
+
+                    if (!partnerRabbit || !isBreadable(partnerRabbit))
+                    {
+                        return;
+                    }
+            
+                    // start dancing
+                    partnerRabbit._controller.startDance();
+                    _controller.startDance();
+
+                    Invoke("breeding", breeding_duration);
+
+                    break;
                 }
-            }
-
-            foodGO.reset();
-            _controller.updateTarget(null);
         }
     }
+
+    // utils
+
+    private void updateYear(int new_year)
+    {
+        years = new_year;
+
+        float mult = 0.3f + (years * 0.1f);
+        Vector3 scale = new Vector3(mult, mult, mult);
+        transform.localScale = scale;
+
+        _controller.updateYear(years);
+        _animalFood.updateYear(years);
+    }
+
+    private void createBaby(GameObject container)
+    {
+        GameObject obj = Instantiate(baby, transform.position, Quaternion.identity);
+        obj.transform.SetParent(container.transform);
+        obj.name = "Rabbit new";
+
+        Rabbit rabbit = obj.GetComponent<Rabbit>();
+        rabbit.Start();
+        rabbit.updateYear(1);
+    }
+
+    public bool isBreadable(Rabbit partnerRabbit)
+    {
+        return !(!breading_target || !partnerRabbit.breading_target
+                        || breading_target != partnerRabbit.gameObject
+                        || partnerRabbit.breading_target != gameObject);
+    }
+
+    public bool isStartBreading()
+    {
+        return breeding_is_search && years >= years_for_breading;
+    }
+
+    public void stopBreadingSearch()
+    {
+        breeding_is_search = false;
+    }
+
+    public void startSearchBreeding()
+    {
+        breeding_is_search = true;
+    }
+
 }

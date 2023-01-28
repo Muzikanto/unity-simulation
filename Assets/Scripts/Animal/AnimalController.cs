@@ -5,26 +5,39 @@ using static UnityEditor.FilePathAttribute;
 
 public class AnimalController : MonoBehaviour
 {
-    public float speed = 3f;
+
+    public float speed_initial = 2f;
+    public float speed_by_year = 0.3f;
+
+    public float jump_force_initial = 1.5f;
+    public float jump_force_by_year = 0.25f;
+
     public float jump_force = 2f;
-    public float rotation_speed = 2f;
+
+    private float speed = 3f;
 
     //
 
     private Rigidbody _rigidBody;
 
-    public Collider target = null;
+    public GameObject target = null;
     //
     private float _random_interval = 0;
     private Vector3 _random_position = Vector3.zero;
 
     public bool is_ground = false;
     public bool is_jump = false;
+    public bool is_dance = false;
 
     // Start is called before the first frame update
     void Start()
     {
         _rigidBody = GetComponent<Rigidbody>();
+        updateRandomPosition();
+
+        is_jump = false;
+        is_dance = false;
+        is_ground = false;
     }
 
     // Update is called once per frame
@@ -35,9 +48,15 @@ public class AnimalController : MonoBehaviour
 
     //
 
-    public void updateTarget(Collider newTarget)
+    public void updateTarget(GameObject newTarget)
     {
         target = newTarget;
+    }
+
+    public void updateYear(int new_year)
+    {
+        speed = speed_initial + (new_year * speed_by_year);
+        jump_force = jump_force_initial + (new_year * jump_force_by_year);
     }
 
     //
@@ -49,6 +68,19 @@ public class AnimalController : MonoBehaviour
             fixedRotation();
             return;
         }
+        if (is_dance)
+        {
+            fixedRotation();
+
+            is_jump = true;
+
+            _rigidBody.AddForce(Vector3.up * jump_force, ForceMode.Impulse);
+
+            Invoke("resetJump", 1);
+
+            return;
+        }
+
 
         is_jump = true;
 
@@ -110,6 +142,20 @@ public class AnimalController : MonoBehaviour
         is_jump = false;
     }
 
+    // dance
+
+    public void startDance()
+    {
+        is_dance = true;
+    }
+
+    public void stopDance()
+    {
+        is_dance = false;
+    }
+
+    //
+
     private void updateRandomPosition()
     {
         _random_position.x = Random.value - 0.5f;
@@ -119,7 +165,7 @@ public class AnimalController : MonoBehaviour
         _random_position.z *= 1_000;
     }
 
-    //
+    // implements
 
     void OnTriggerStay(Collider col)
     {               //если в тригере что то есть и у обьекта тег "ground"

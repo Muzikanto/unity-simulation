@@ -20,9 +20,9 @@ public class Food : MonoBehaviour
 
     // 
 
-    public void reset()
+    public void decrement(int value)
     {
-        updateSize(0);
+        updateSize(size - value);
     }
 
     //
