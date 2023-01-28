@@ -5,7 +5,7 @@ using UnityEngine;
 public class AnimalConsumeFood : MonoBehaviour
 {
     public int food_max = 10;
-    public int food_interval = 10;
+    public int food_interval = 15;
     public int food = 5;
 
     public HealthBar healthBar;
@@ -54,7 +54,7 @@ public class AnimalConsumeFood : MonoBehaviour
         healthBar.updateParams(new_food);
     }
 
-    public void increaseFood(int add_food)
+    public void increase(int add_food)
     {
         updateFood(food + add_food);
     }

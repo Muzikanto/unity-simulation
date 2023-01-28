@@ -8,8 +8,8 @@ public class Food : MonoBehaviour
     public int size_max = 5;
     public int grow_sec = 10;
 
-    private float _scale_initial = 0.2f;
-    private float _scale_per_size = 0.1f;
+    private float _scale_initial = 0.05f;
+    private float _scale_per_size = 0.15f;
 
     // Start is called before the first frame update
     void Start()

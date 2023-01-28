@@ -176,4 +176,11 @@ public class AnimalController : MonoBehaviour
     {              //если из триггера что то вышло и у обьекта тег "ground"
         if (col.tag == "Ground") is_ground = false;     //то вЫключаем переменную "на земле"
     }
+
+    // utils
+
+    public void clearTarget()
+    {
+        target = null;
+    }
 }

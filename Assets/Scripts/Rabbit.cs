@@ -13,14 +13,13 @@ public class Rabbit : MonoBehaviour, IAnimalVision, IAnimalAttack
 {
     public GameObject baby;
 
-    public int years = 3;
-    public int years_max = 3;
     public int years_for_breading = 3;
 
     public bool breeding_is_search = true;
     public float breeding_interval = 10f;
     public float breeding_duration = 3f;
     public int breeding_child_count = 2;
+    public bool breading_is = false;
     public GameObject breading_target = null;
 
     public HealthBar healthBar;
@@ -28,6 +27,7 @@ public class Rabbit : MonoBehaviour, IAnimalVision, IAnimalAttack
     private Rigidbody _rigidBody = null;
     private AnimalController _controller = null;
     private AnimalConsumeFood _animalFood = null;
+    private AnimalYear _year = null;
 
     private List<GameObject> _food_list = new List<GameObject>();
     private List<GameObject> _rabbit_list = new List<GameObject>();
@@ -39,12 +39,9 @@ public class Rabbit : MonoBehaviour, IAnimalVision, IAnimalAttack
         _rigidBody = GetComponent<Rigidbody>();
         _controller = GetComponent<AnimalController>();
         _animalFood = GetComponent<AnimalConsumeFood>();
+        _year = GetComponent<AnimalYear>();
 
         updateTarget();
-
-        updateYear(years);
-
-        StartCoroutine(enumeratorYear());
     }
 
     // Update is called once per frame
@@ -160,17 +157,6 @@ public class Rabbit : MonoBehaviour, IAnimalVision, IAnimalAttack
         Invoke("startSearchBreeding", breeding_interval);
     }
 
-    private IEnumerator enumeratorYear()
-    {
-        while (years < years_max)
-        {
-            //Wait for seconds
-            yield return new WaitForSecondsRealtime(10);
-
-            updateYear(years + 1);
-        }
-    }
-
     // imlements
 
     public void OnVisionEnter(Collider other)
@@ -234,9 +220,9 @@ public class Rabbit : MonoBehaviour, IAnimalVision, IAnimalAttack
                     }
 
                     foodGO.decrement(food_taked);
-                    _animalFood.increaseFood(food_taked);
+                    _animalFood.increase(food_taked);
 
-                    _controller.updateTarget(null);
+                    _controller.clearTarget();
 
                     break;
                 };
@@ -251,14 +237,18 @@ public class Rabbit : MonoBehaviour, IAnimalVision, IAnimalAttack
 
                     Rabbit partnerRabbit = other.GetComponent<Rabbit>();
 
-                    if (!partnerRabbit || !isBreadable(partnerRabbit))
+                    if (!partnerRabbit || !isBreadable(partnerRabbit) || partnerRabbit.breading_is)
                     {
                         return;
                     }
-            
+
+                    breading_is = true;
+
                     // start dancing
                     partnerRabbit._controller.startDance();
                     _controller.startDance();
+
+                    Debug.Log("Breading: " + other.name);
 
                     Invoke("breeding", breeding_duration);
 
@@ -269,18 +259,6 @@ public class Rabbit : MonoBehaviour, IAnimalVision, IAnimalAttack
 
     // utils
 
-    private void updateYear(int new_year)
-    {
-        years = new_year;
-
-        float mult = 0.3f + (years * 0.1f);
-        Vector3 scale = new Vector3(mult, mult, mult);
-        transform.localScale = scale;
-
-        _controller.updateYear(years);
-        _animalFood.updateYear(years);
-    }
-
     private void createBaby(GameObject container)
     {
         GameObject obj = Instantiate(baby, transform.position, Quaternion.identity);
@@ -289,7 +267,9 @@ public class Rabbit : MonoBehaviour, IAnimalVision, IAnimalAttack
 
         Rabbit rabbit = obj.GetComponent<Rabbit>();
         rabbit.Start();
-        rabbit.updateYear(1);
+
+        rabbit._year.Start();
+        rabbit._year.updateYear(1);
     }
 
     public bool isBreadable(Rabbit partnerRabbit)
@@ -301,7 +281,7 @@ public class Rabbit : MonoBehaviour, IAnimalVision, IAnimalAttack
 
     public bool isStartBreading()
     {
-        return breeding_is_search && years >= years_for_breading;
+        return breeding_is_search && _year.years >= years_for_breading;
     }
 
     public void stopBreadingSearch()

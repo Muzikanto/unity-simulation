@@ -397,6 +397,7 @@ GameObject:
   - component: {fileID: 1921055882}
   - component: {fileID: 1921055886}
   - component: {fileID: 8592447526873435049}
+  - component: {fileID: 8131374606110597216}
   - component: {fileID: 1006353969669279943}
   - component: {fileID: 1921055884}
   - component: {fileID: 1921055885}
@@ -488,13 +489,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   baby: {fileID: 2954252133130689489}
-  years: 3
-  years_max: 3
   years_for_breading: 3
   breeding_is_search: 1
   breeding_interval: 10
   breeding_duration: 5
   breeding_child_count: 2
+  breading_is: 0
   breading_target: {fileID: 0}
   healthBar: {fileID: 1880378033}
 --- !u!114 &1921055886
@@ -534,6 +534,20 @@ MonoBehaviour:
   food_interval: 10
   food: 5
   healthBar: {fileID: 1880378033}
+--- !u!114 &8131374606110597216
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2954252133130689489}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56b679b2f93734084829c7c8cc3563fc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  years: 3
+  years_max: 3
 --- !u!54 &1006353969669279943
 Rigidbody:
   m_ObjectHideFlags: 0
