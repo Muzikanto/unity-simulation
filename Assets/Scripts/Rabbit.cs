@@ -11,35 +11,37 @@ using System.ComponentModel;
 
 public class Rabbit : MonoBehaviour, IAnimalVision, IAnimalAttack
 {
-    public GameObject baby;
-
-    public int years_for_breading = 3;
-
-    public bool breeding_is_search = true;
-    public float breeding_interval = 10f;
-    public float breeding_duration = 3f;
-    public int breeding_child_count = 2;
-    public bool breading_is = false;
-    public GameObject breading_target = null;
-
-    public HealthBar healthBar;
     private Transform _transform = null;
     private Rigidbody _rigidBody = null;
-    private AnimalController _controller = null;
-    private AnimalConsumeFood _animalFood = null;
-    private AnimalYear _year = null;
+
+    public HealthBar healthBar;
+    public AnimalController _controller = null;
+    public AnimalConsumeFood _food = null;
+    public AnimalYear _year = null;
+    public AnimalBreading _breeding = null;
 
     private List<GameObject> _food_list = new List<GameObject>();
     private List<GameObject> _rabbit_list = new List<GameObject>();
 
-    // Start is called before the first frame update
-    void Start()
+    public void Awake()
     {
         _transform = GetComponent<Transform>();
         _rigidBody = GetComponent<Rigidbody>();
         _controller = GetComponent<AnimalController>();
-        _animalFood = GetComponent<AnimalConsumeFood>();
+        _food = GetComponent<AnimalConsumeFood>();
         _year = GetComponent<AnimalYear>();
+        _breeding = GetComponent<AnimalBreading>();
+    }
+
+    // Start is called before the first frame update
+    public void Start()
+    {
+        _transform = GetComponent<Transform>();
+        _rigidBody = GetComponent<Rigidbody>();
+        _controller = GetComponent<AnimalController>();
+        _food = GetComponent<AnimalConsumeFood>();
+        _year = GetComponent<AnimalYear>();
+        _breeding = GetComponent<AnimalBreading>();
 
         updateTarget();
     }
@@ -61,7 +63,7 @@ public class Rabbit : MonoBehaviour, IAnimalVision, IAnimalAttack
         }
 
         // breading
-        if (isStartBreading())
+        if (_breeding.isStartBreading())
         {
             // if i see rabbits
             if (_rabbit_list.Count > 0)
@@ -71,8 +73,8 @@ public class Rabbit : MonoBehaviour, IAnimalVision, IAnimalAttack
 
                 // get first breadable rabbit
                 GameObject first = _rabbit_list.Find(el => {
-                    Rabbit r = el.GetComponent<Rabbit>();
-                    bool is_true = r.isStartBreading();
+                    AnimalBreading b = el.GetComponent<AnimalBreading>();
+                    bool is_true = b.isStartBreading();
 
                     return is_true;
                 });
@@ -83,12 +85,12 @@ public class Rabbit : MonoBehaviour, IAnimalVision, IAnimalAttack
                     Rabbit partnerRabbit = first.GetComponent<Rabbit>();
 
                     // stop partner searching
-                    stopBreadingSearch();
-                    partnerRabbit.stopBreadingSearch();
+                    _breeding.stopBreadingSearch();
+                    partnerRabbit._breeding.stopBreadingSearch();
 
                     // setup partner
-                    breading_target = first;
-                    partnerRabbit.breading_target = gameObject;
+                    _breeding.breading_target = first;
+                    partnerRabbit._breeding.breading_target = gameObject;
 
                     // move to partner
                     _controller.updateTarget(first);
@@ -100,7 +102,7 @@ public class Rabbit : MonoBehaviour, IAnimalVision, IAnimalAttack
         }
 
         // find food
-        if (!_animalFood.isFull())
+        if (!_food.isFull())
         {
             // if i see food
             if (_food_list.Count > 0)
@@ -126,35 +128,6 @@ public class Rabbit : MonoBehaviour, IAnimalVision, IAnimalAttack
                 }
             }
         }
-    }
-
-    private void breeding() {
-        // stop dance for 2
-        if (breading_target)
-        {
-            Rabbit rabbit2 = breading_target.GetComponent<Rabbit>();
-
-            rabbit2._controller.stopDance();
-            rabbit2._controller.updateTarget(null);
-
-            rabbit2.breading_target = null;
-        }
-
-        // stop dance for 1
-        _controller.stopDance();
-        _controller.updateTarget(null);
-
-        breading_target = null;
-
-        // spawn babies
-        GameObject container = transform.parent.gameObject;
-
-        for(int i = 0; i < breeding_child_count; i++)
-        {
-            createBaby(container);
-        }
-
-        Invoke("startSearchBreeding", breeding_interval);
     }
 
     // imlements
@@ -201,7 +174,7 @@ public class Rabbit : MonoBehaviour, IAnimalVision, IAnimalAttack
         {
             case "Food":
                 {
-                    if (_animalFood.isFull() || breading_target)
+                    if (_food.isFull() || _breeding.breading_target)
                     {
                         return;
                     }
@@ -210,17 +183,16 @@ public class Rabbit : MonoBehaviour, IAnimalVision, IAnimalAttack
 
                     int food_taked = 0;
 
-                    if (_animalFood.food + foodGO.size >= _animalFood.food_max)
+                    if (_food.food + foodGO.size >= _food.food_max)
                     {
-                        food_taked = _animalFood.food_max - _animalFood.food;
+                        food_taked = _food.food_max - _food.food;
                     }
                     else
                     {
                         food_taked = foodGO.size;
                     }
 
-                    foodGO.decrement(food_taked);
-                    _animalFood.increase(food_taked);
+                    _food.increase(food_taked);
 
                     _controller.clearTarget();
 
@@ -235,22 +207,10 @@ public class Rabbit : MonoBehaviour, IAnimalVision, IAnimalAttack
                         return;
                     }
 
-                    Rabbit partnerRabbit = other.GetComponent<Rabbit>();
-
-                    if (!partnerRabbit || !isBreadable(partnerRabbit) || partnerRabbit.breading_is)
+                    if (other.gameObject)
                     {
-                        return;
+                        _breeding.startBreading(other.gameObject);
                     }
-
-                    breading_is = true;
-
-                    // start dancing
-                    partnerRabbit._controller.startDance();
-                    _controller.startDance();
-
-                    Debug.Log("Breading: " + other.name);
-
-                    Invoke("breeding", breeding_duration);
 
                     break;
                 }
@@ -258,40 +218,4 @@ public class Rabbit : MonoBehaviour, IAnimalVision, IAnimalAttack
     }
 
     // utils
-
-    private void createBaby(GameObject container)
-    {
-        GameObject obj = Instantiate(baby, transform.position, Quaternion.identity);
-        obj.transform.SetParent(container.transform);
-        obj.name = "Rabbit new";
-
-        Rabbit rabbit = obj.GetComponent<Rabbit>();
-        rabbit.Start();
-
-        rabbit._year.Start();
-        rabbit._year.updateYear(1);
-    }
-
-    public bool isBreadable(Rabbit partnerRabbit)
-    {
-        return !(!breading_target || !partnerRabbit.breading_target
-                        || breading_target != partnerRabbit.gameObject
-                        || partnerRabbit.breading_target != gameObject);
-    }
-
-    public bool isStartBreading()
-    {
-        return breeding_is_search && _year.years >= years_for_breading;
-    }
-
-    public void stopBreadingSearch()
-    {
-        breeding_is_search = false;
-    }
-
-    public void startSearchBreeding()
-    {
-        breeding_is_search = true;
-    }
-
 }

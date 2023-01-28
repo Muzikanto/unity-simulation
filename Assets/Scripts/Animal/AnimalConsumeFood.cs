@@ -5,10 +5,13 @@ using UnityEngine;
 public class AnimalConsumeFood : MonoBehaviour
 {
     public int food_max = 10;
-    public int food_interval = 15;
+    public int food_consume_interval = 15;
     public int food = 5;
 
     public HealthBar healthBar;
+
+    //
+    private float move_time = 0f;
 
     // Start is called before the first frame update
     void Start()
@@ -17,7 +20,7 @@ public class AnimalConsumeFood : MonoBehaviour
 
         updateFood(food);
 
-        StartCoroutine(enumeratorFood());
+        //StartCoroutine(enumeratorFood());
     }
 
     // Update is called once per frame
@@ -28,18 +31,18 @@ public class AnimalConsumeFood : MonoBehaviour
 
     //
 
-    private IEnumerator enumeratorFood()
-    {
-        while (food > 0)
-        {
-            //Wait for seconds
-            yield return new WaitForSecondsRealtime(food_interval);
+    //private IEnumerator enumeratorFood()
+    //{
+    //    while (food > 0)
+    //    {
+    //        //Wait for seconds
+    //        yield return new WaitForSecondsRealtime(food_consume_interval);
 
-            updateFood(food - 1);
-        }
+    //        updateFood(food - 1);
+    //    }
 
-        Destroy(gameObject);
-    }
+    //    Destroy(gameObject);
+    //}
 
     // public
 
@@ -48,15 +51,15 @@ public class AnimalConsumeFood : MonoBehaviour
         return food == food_max;
     }
 
-    public void updateFood(int new_food)
+    public void updateMoveTime(float time)
     {
-        food = new_food;
-        healthBar.updateParams(new_food);
-    }
+        move_time += time;
 
-    public void increase(int add_food)
-    {
-        updateFood(food + add_food);
+        if (move_time >= food_consume_interval)
+        {
+            move_time -= food_consume_interval;
+            decrease(1);
+        }
     }
 
     public void updateYear(int year)
@@ -64,15 +67,36 @@ public class AnimalConsumeFood : MonoBehaviour
         if (year <= 2)
         {
             food_max = 5;
-            food_interval = 5;
+            food_consume_interval = 5;
         } else
         {
             food_max = 10;
-            food_interval = 10;
+            food_consume_interval = 10;
         }
 
         updateFood(food_max);
     }
 
+    public void increase(int value)
+    {
+        updateFood(food + value);
+    }
+
+    public void decrease(int value)
+    {
+        updateFood(food - value);
+    }
+
     // utils
+
+    private void updateFood(int new_food)
+    {
+        food = new_food;
+        healthBar.updateParams(new_food);
+
+        if (food == 0)
+        {
+            Destroy(gameObject);
+        }
+    }
 }

@@ -1,99 +1,207 @@
 using UnityEngine;
+using System.Collections.Generic;
+using static UnityEngine.GraphicsBuffer;
+using System.Collections;
+using System.Drawing;
+using static UnityEngine.ParticleSystem;
+using System.Security.Cryptography;
+using static UnityEditor.PlayerSettings;
+using static UnityEngine.EventSystems.EventTrigger;
+using System.ComponentModel;
 
-public class Fox : MonoBehaviour
+public class Fox : MonoBehaviour, IAnimalVision, IAnimalAttack
 {
-    public float speed = 10f;
-    public float vision = 3f;
+    private Transform _transform = null;
+    private Rigidbody _rigidBody = null;
 
-    public float need_food = 10f;
-    public float food = 0f;
+    public HealthBar healthBar;
+    public AnimalController _controller = null;
+    public AnimalConsumeFood _food = null;
+    public AnimalYear _year = null;
+    public AnimalBreading _breeding = null;
 
-    private Transform _transform;
-    private Rigidbody _rigidBody;
-    private GameObject _vision;
-    private SphereCollider _visionCollider;
-
-    private Vector3 _move_to = Vector3.zero;
-    private float _move_time = 0;
+    private List<GameObject> _fox_list = new List<GameObject>();
+    private List<GameObject> _rabbit_list = new List<GameObject>();
 
     // Start is called before the first frame update
-    void Start()
+    public void Start()
     {
         _transform = GetComponent<Transform>();
         _rigidBody = GetComponent<Rigidbody>();
+        _controller = GetComponent<AnimalController>();
+        _food = GetComponent<AnimalConsumeFood>();
+        _year = GetComponent<AnimalYear>();
+        _breeding = GetComponent<AnimalBreading>();
 
-        _vision = _transform.GetChild(0).gameObject;
-        _visionCollider = _vision.GetComponent<SphereCollider>();
-
-        randomMove();
-
-        food = need_food;
+        updateTarget();
     }
 
     // Update is called once per frame
     void Update()
     {
-        refresh();
-        move();
+        updateTarget();
+    }
+
+    // methods
+
+    private void updateTarget()
+    {
+        // stop if target exists
+        if (_controller.target != null)
+        {
+            return;
+        }
+
+        // breading
+        if (_breeding.isStartBreading())
+        {
+            // if i see rabbits
+            if (_fox_list.Count > 0)
+            {
+                // remove deleted
+                _fox_list.RemoveAll(x => x == null);
+
+                // get first breadable rabbit
+                GameObject first = _fox_list.Find(el =>
+                {
+                    AnimalBreading b = el.GetComponent<AnimalBreading>();
+                    bool is_true = b.isStartBreading();
+
+                    return is_true;
+                });
+
+                // update target
+                if (first)
+                {
+                    Fox partnerRabbit = first.GetComponent<Fox>();
+
+                    // stop partner searching
+                    _breeding.stopBreadingSearch();
+                    partnerRabbit._breeding.stopBreadingSearch();
+
+                    // setup partner
+                    _breeding.breading_target = first;
+                    partnerRabbit._breeding.breading_target = gameObject;
+
+                    // move to partner
+                    _controller.updateTarget(first);
+                    partnerRabbit._controller.updateTarget(gameObject);
+
+                    return;
+                }
+            }
+        }
+
+        // find food
+        if (!_food.isFull())
+        {
+            // if i see food
+            if (_rabbit_list.Count > 0)
+            {
+                // remove deleted
+                _rabbit_list.RemoveAll(x => x == null);
+
+                // get first available food
+                GameObject first = _rabbit_list[0];
+
+
+                // update target
+                if (first)
+                {
+                    _controller.updateTarget(first.gameObject);
+
+                    return;
+                }
+            }
+        }
     }
 
     // imlements
-   
-    public void onVision(Collider other)
+
+    public void OnVisionEnter(Collider other)
     {
-        string entityTag = other.tag;
-
-        if (entityTag == "Rabbit")
+        switch (other.tag)
         {
-            // Vector3 dir = other.transform.position - transform.position;
-            // Debug.DrawRay(transform.position, dir, Color.red, 5, false);
+            case "Rabbit":
+                {
+                    _rabbit_list.Add(other.gameObject);
+                    break;
+                };
 
-            Destroy(other.gameObject);
+            case "Fox":
+                {
+                    _fox_list.Add(other.gameObject);
+                    break;
+                };
         }
     }
 
-    // utils
-
-    private void move()
+    public void OnVisionExit(Collider other)
     {
-        _move_time += Time.deltaTime;
-
-        if (_move_time >= 5)
+        switch (other.tag)
         {
-            randomMove();
-            _move_time = 0;
+            case "Rabbit":
+                {
+                    _rabbit_list.Remove(other.gameObject);
+                    break;
+                };
+
+            case "Fox":
+                {
+                    _fox_list.Remove(other.gameObject);
+                    break;
+                };
         }
-
-
-        Vector3 move = new Vector3(Random.Range(-1, 1), 0, Random.Range(-1, 1)) * speed;
-        _rigidBody.velocity = _move_to;
     }
 
-    private void randomMove()
+    public void OnAttackEnter(Collider other)
     {
-        if (Random.value > 0.5f)
+        switch (other.tag)
         {
-            _move_to.x = -1;
-        }
-        else
-        {
-            _move_to.x = 1;
+            case "Rabbit":
+                {
+                    if (_food.isFull() || _breeding.breading_target)
+                    {
+                        return;
+                    }
+
+                    int food_size = 2;
+                    int food_taked = 0;
+
+                    if (_food.food + food_size >= _food.food_max)
+                    {
+                        food_taked = _food.food_max - _food.food;
+                    }
+                    else
+                    {
+                        food_taked = food_size;
+                    }
+
+                    Destroy(other.gameObject);
+                    _food.increase(food_taked);
+
+                    _controller.clearTarget();
+
+                    break;
+                };
+
+            case "Fox":
+                {
+                    // skip trigger for ground
+                    if (other.isTrigger)
+                    {
+                        return;
+                    }
+
+                    if (other.gameObject)
+                    {
+                        _breeding.startBreading(other.gameObject);
+                    }
+
+                    break;
+                }
         }
 
-        if (Random.value > 0.5f)
-        {
-            _move_to.z = -1;
-        }
-        else
-        {
-            _move_to.z = 1;
-        }
-      
-    }
-
-    private void refresh()
-    {
-        // settings
-        _visionCollider.radius = vision;
+        // utils
     }
 }

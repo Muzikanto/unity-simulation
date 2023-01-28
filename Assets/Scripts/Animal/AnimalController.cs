@@ -13,26 +13,32 @@ public class AnimalController : MonoBehaviour
     public float jump_force_by_year = 0.25f;
 
     public float jump_force = 2f;
-
     private float speed = 3f;
 
     //
 
     private Rigidbody _rigidBody;
+    private AnimalConsumeFood _food;
 
     public GameObject target = null;
+
     //
     private float _random_interval = 0;
     private Vector3 _random_position = Vector3.zero;
 
+    //
     public bool is_ground = false;
     public bool is_jump = false;
     public bool is_dance = false;
+
+    //
 
     // Start is called before the first frame update
     void Start()
     {
         _rigidBody = GetComponent<Rigidbody>();
+        _food = GetComponent<AnimalConsumeFood>();
+
         updateRandomPosition();
 
         is_jump = false;
@@ -44,6 +50,7 @@ public class AnimalController : MonoBehaviour
     void Update()
     {
         move();
+
     }
 
     //
@@ -66,6 +73,8 @@ public class AnimalController : MonoBehaviour
         if (!is_ground || is_jump)
         {
             fixedRotation();
+            onMoving();
+
             return;
         }
         if (is_dance)
@@ -83,6 +92,7 @@ public class AnimalController : MonoBehaviour
 
 
         is_jump = true;
+        onMoving();
 
         if (target)
         {
@@ -182,5 +192,10 @@ public class AnimalController : MonoBehaviour
     public void clearTarget()
     {
         target = null;
+    }
+
+    private void onMoving()
+    {
+        _food.updateMoveTime(Time.deltaTime);
     }
 }

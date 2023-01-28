@@ -27,7 +27,7 @@ public class Food : MonoBehaviour
 
     //
 
-    IEnumerator grow()
+    private IEnumerator grow()
     {
         while (true)
         {
